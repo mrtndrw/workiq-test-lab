@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.generated*
+npm-debug.log*
+.DS_Store
+.sessions/

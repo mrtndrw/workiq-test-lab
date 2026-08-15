@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Work IQ Test Lab</title>
+  <link rel="icon" href="data:," />
+  <script src="theme.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <main class="main">
+      <header class="app-header">
+        <div>
+          <span class="header-kicker">Microsoft Work IQ API</span>
+          <h1>Work IQ Test Lab</h1>
+        </div>
+        <div class="header-actions">
+          <div class="workspace-switch" role="group" aria-label="Laboratory workspace">
+            <button class="workspace-tab active" type="button" data-workspace="conversation" aria-pressed="true">Conversation</button>
+            <button class="workspace-tab" type="button" data-workspace="experiments" aria-pressed="false">Experiments</button>
+          </div>
+          <div class="theme-switch" role="group" aria-label="Color theme">
+            <button class="theme-option" type="button" data-theme-choice="light" aria-label="Use light theme" aria-pressed="false" title="Light theme">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.25"/><path d="M10 2.25v1.5M10 16.25v1.5M2.25 10h1.5M16.25 10h1.5M4.52 4.52l1.06 1.06M14.42 14.42l1.06 1.06M15.48 4.52l-1.06 1.06M5.58 14.42l-1.06 1.06"/></svg>
+            </button>
+            <button class="theme-option" type="button" data-theme-choice="dark" aria-label="Use dark theme" aria-pressed="false" title="Dark theme">
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16.2 12.8A7 7 0 0 1 7.2 3.8a7 7 0 1 0 9 9Z"/></svg>
+            </button>
+          </div>
+          <div class="header-auth" role="group" aria-label="Delegated identity">
+            <div id="runtimeHead" class="runtime-head">
+              <span class="pulse" id="runtimePulse"></span>
+              <span id="status" class="status" role="status" aria-live="polite">Checking runtime</span>
+            </div>
+            <a id="signin" href="/auth/login" class="signin hidden">Sign in</a>
+            <div id="userRow" class="user-row hidden">
+              <span class="user-avatar" id="userAvatar">·</span>
+              <div class="user-meta">
+                <span class="user-name" id="userName">Not signed in</span>
+              </div>
+              <button id="signout" class="icon-btn hidden" type="button" title="Sign out" aria-label="Sign out">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 6V4.5A1.5 1.5 0 0 0 10.5 3h-5A1.5 1.5 0 0 0 4 4.5v11A1.5 1.5 0 0 0 5.5 17h5A1.5 1.5 0 0 0 12 15.5V14M9 10h8m0 0-2.5-2.5M17 10l-2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section id="liveView" class="stage-view live-view">
+        <div class="lab-shell">
+          <div class="lab-main">
+            <div class="lab-toolbar">
+              <div class="toolbar-group">
+                <span class="control-label">Caller</span>
+                <div class="view-switch" role="group" aria-label="Caller mode">
+                  <button class="view active" data-view="agent" type="button" aria-pressed="true">Agent orchestrated</button>
+                  <button class="view" data-view="direct" type="button" aria-pressed="false">Direct protocol</button>
+                </div>
+              </div>
+              <div class="toolbar-group">
+                <span class="control-label" id="modesLabel">Available connections</span>
+                <div class="modes" role="group" aria-label="Work IQ connections">
+                  <button class="mode" data-mode="rest" type="button" aria-pressed="false">REST</button>
+                  <button class="mode" data-mode="a2a" type="button" aria-pressed="false">A2A</button>
+                  <button class="mode" data-mode="mcp" type="button" aria-pressed="true">MCP</button>
+                </div>
+              </div>
+              <div class="toolbar-spacer"></div>
+              <button id="newChat" class="quiet-button" type="button">New chat</button>
+            </div>
+            <p id="mode-hint" class="hint"></p>
+
+            <details id="advancedSetup" class="lab-config">
+              <summary id="advancedSetupSummary">
+                <span id="advancedSetupLabel">
+                  <span class="setup-label-closed">Advanced setup<span id="advancedSetupPromptHint"> · system prompt</span></span>
+                  <span class="setup-label-open">Hide advanced setup</span>
+                </span>
+              </summary>
+              <div class="config-grid">
+                <div id="modelRow">
+                  <label for="llmModel">Azure OpenAI deployment</label>
+                  <select id="llmModel" class="agent-input"></select>
+                  <small id="modelMeta"></small>
+                </div>
+                <div>
+                  <label for="agentId">Route to a specific agent <span>optional</span></label>
+                  <input id="agentId" type="text" class="agent-input hidden" placeholder="Agent ID" />
+                  <button id="listAgents" class="side-link hidden" type="button">Discover available agents</button>
+                  <div id="agents-out" class="agents-out hidden"></div>
+                </div>
+                <div id="systemPromptRow" class="config-span">
+                  <label for="orchestratorPrompt">Orchestrator system prompt</label>
+                  <textarea id="orchestratorPrompt" class="agent-input system-prompt" rows="12" maxlength="20000"></textarea>
+                  <div class="config-inline">
+                    <small>Sent only to your configured Azure OpenAI deployment for agent-orchestrated requests.</small>
+                    <button id="resetSystemPrompt" class="side-link" type="button">Reset to built-in prompt</button>
+                  </div>
+                </div>
+                <div class="config-footer config-span">
+                  <button id="closeAdvancedSetup" class="quiet-button" type="button">Close advanced setup</button>
+                </div>
+              </div>
+            </details>
+
+            <div class="scenario-band">
+              <div class="scenario-title">
+                <span class="eyebrow">Guided stories</span>
+                <small>Each story sets and shows its route</small>
+              </div>
+              <div class="examples" id="examples">
+                <button class="example" type="button" data-route-view="agent" data-backends="rest,a2a,mcp" data-prompt="Brief me for my next customer meeting. Include recent emails, relevant documents, attendees, open decisions, and suggested talking points.">
+                  <span>01</span><strong>Customer briefing</strong><small>Agent · all connections available</small>
+                </button>
+                <button class="example" type="button" data-route-view="direct" data-route-mode="rest" data-prompt="Summarize my unread emails from today, group them by project, and identify anything that needs a response.">
+                  <span>02</span><strong>Inbox triage</strong><small>Direct · REST</small>
+                </button>
+                <button class="example" type="button" data-route-view="direct" data-route-mode="a2a" data-prompt="Recap my most recent meeting, list decisions and action items, and find the files that were discussed.">
+                  <span>03</span><strong>Meeting to action</strong><small>Direct · A2A</small>
+                </button>
+                <button class="example policy-story" type="button" data-route-view="agent" data-backends="mcp" data-prompt="Send an email to my manager with a concise summary of today's open action items.">
+                  <span>04</span><strong>Governed action</strong><small>Agent · MCP · tenant policy</small>
+                </button>
+              </div>
+            </div>
+
+            <section id="chat" class="chat hidden" aria-live="polite"></section>
+
+            <div id="empty-hint" class="lab-empty">
+              <div class="empty-glyph"><span></span><span></span><span></span></div>
+              <span class="eyebrow">Ready for a live request</span>
+              <h2>Really get to know the Work IQ API.</h2>
+              <p>Choose your preferred protocol, switch between direct connections and agent orchestration, and explore the available parameters and settings.</p>
+            </div>
+
+            <div class="composer-wrap">
+              <div class="prompt-bar">
+                <div id="attach" class="attach prompt-context-panel hidden">
+                  <div class="prompt-context-head">
+                    <div>
+                      <strong>Work context</strong>
+                      <span>Ground this message with files or the web</span>
+                    </div>
+                    <span id="contextCount" class="context-count">0 files</span>
+                  </div>
+                  <div id="attach-list" class="attach-list"></div>
+                  <div class="attach-controls">
+                    <input id="uriInput" type="url" class="uri-input" aria-label="OneDrive or SharePoint file URL" placeholder="Paste a OneDrive or SharePoint file URL" />
+                    <label class="web-toggle">
+                      <input type="checkbox" id="webGrounding" checked />
+                      <span>Web grounding</span>
+                    </label>
+                  </div>
+                  <p id="attach-hint" class="attach-hint">REST can combine enterprise grounding with OneDrive or SharePoint file URLs and per-message web grounding. MCP ask can also receive file URLs.</p>
+                </div>
+                <div class="composer">
+                  <button id="contextToggle" class="composer-action" type="button" aria-label="Toggle work context" aria-controls="attach" aria-expanded="true" title="Add work context">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12"/></svg>
+                  </button>
+                  <textarea id="question" rows="1" aria-label="Ask Work IQ" aria-describedby="composerStatus" placeholder="Ask Work IQ about your work"></textarea>
+                  <span id="promptRouteChip" class="tool-chip prompt-route-chip" aria-label="Current request route">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12M12 6l4 4-4 4"/></svg>
+                    <span>Agent · MCP</span>
+                  </span>
+                  <button id="askBtn" class="composer-send" type="button" title="Send" aria-label="Send" disabled>
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V5M5.5 9.5 10 5l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
+                  <button id="stopBtn" class="composer-send composer-stop hidden" type="button" title="Stop response" aria-label="Stop response">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="6" y="6" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="composer-foot">
+                <div class="composer-toggles">
+                  <label class="toggle"><input type="checkbox" id="multiturn" checked /> Continue conversation</label>
+                  <label class="toggle"><input type="checkbox" id="stream" checked /> Stream response</label>
+                </div>
+                <span id="composerStatus" class="composer-status" role="status" aria-live="polite">Enter a prompt to begin.</span>
+                <span class="composer-note">AI-generated content can be incorrect. Verify before use.</span>
+              </div>
+              <div class="agent-picker">
+                <button id="chatWithAgent" class="agent-picker-trigger" type="button" aria-expanded="false" aria-controls="agentPickerList">
+                  <span>Chat with an agent</span><small id="selectedAgent">Choose a discovered agent</small>
+                </button>
+                <div id="agentPickerList" class="agent-picker-list hidden" role="listbox" aria-label="Available agents">
+                  <span class="agent-picker-status">Discovering available agents…</span>
+                </div>
+                <p id="agentRouteNotice" class="agent-route-notice hidden" role="status" aria-live="polite"></p>
+              </div>
+            </div>
+          </div>
+
+          <aside class="execution-rail" aria-label="Live execution" tabindex="0">
+            <div class="rail-head">
+              <div>
+                <span class="eyebrow">Live execution</span>
+                <h2>What happens behind the answer</h2>
+              </div>
+              <span id="railState" class="rail-state ready" role="status" aria-live="polite">Ready</span>
+            </div>
+
+            <div class="active-connection" id="activeConnection">
+              <span>Current route</span>
+              <strong>Agent → MCP → Work IQ</strong>
+              <small>Delegated context · tool-based access</small>
+            </div>
+
+            <ol class="pipeline" id="pipeline">
+              <li id="pipe-identity" class="task-row" data-stage="identity">
+                <i>1</i><div><strong>Delegated identity</strong><span>Sign in as the user, not the app</span><small>Waiting</small></div>
+              </li>
+              <li id="pipe-route" class="task-row" data-stage="route">
+                <i>2</i><div><strong>Request route</strong><span>Direct protocol or agent-selected Work IQ tools</span><small>Waiting</small></div>
+              </li>
+              <li id="pipe-workiq" class="task-row" data-stage="workiq">
+                <i>3</i><div><strong>Work IQ processing</strong><span>Permissions, policy, reasoning, and grounding happen inside each call</span><small>Waiting</small></div>
+              </li>
+              <li id="pipe-answer" class="task-row" data-stage="answer">
+                <i>4</i><div><strong>Answer + evidence</strong><span>Response, available citations, trace, raw payload</span><small>Waiting</small></div>
+              </li>
+            </ol>
+
+            <div class="continuation-card" id="conversationState">
+              <span>Continuation mechanism</span>
+              <strong id="continuationTitle">New exchange</strong>
+              <small id="continuationDetail">Choose Continue conversation to reuse protocol-native state.</small>
+              <code id="continuationId">No identifier yet</code>
+            </div>
+
+            <div class="metric-grid">
+              <div><span>Latency</span><strong id="metricLatency">—</strong></div>
+              <div><span>Sources</span><strong id="metricSources">—</strong><small id="metricSourcesNote">Structured citations</small></div>
+              <div><span>Tool calls</span><strong id="metricTools">—</strong></div>
+              <div><span>Turn</span><strong id="metricConversation">1</strong></div>
+            </div>
+
+            <div id="mcpToolSurface" class="rail-log hidden">
+              <div class="rail-log-head">
+                <strong>Available MCP tools</strong>
+                <span id="mcpToolCount">Loading metadata…</span>
+              </div>
+              <div id="mcpToolList" class="execution-log">
+                <p>Discovering the current MCP tool surface…</p>
+              </div>
+            </div>
+
+            <div class="rail-log">
+              <div class="rail-log-head">
+                <strong>Request evidence</strong>
+                <span>Sensitive values redacted</span>
+              </div>
+              <div id="executionLog" class="execution-log">
+                <p>Run a prompt to populate the request trace.</p>
+              </div>
+            </div>
+
+            <div class="cost-note">
+              <span>Copilot Credits</span>
+              <p><strong>Chat/Context:</strong> variable usage; no per-request value is returned. <strong>Direct Work IQ Tools API:</strong> 0.1 credit per call in the current licensing guide.</p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="experimentView" class="stage-view experiment-view hidden" aria-labelledby="experimentTitle">
+        <div class="experiment-shell">
+          <header class="experiment-head">
+            <div>
+              <span class="eyebrow">Experiment workbench</span>
+              <h2 id="experimentTitle">Observe what each Work IQ protocol actually does</h2>
+              <p>Runs stay in this browser tab. Raw exports can contain customer work data and are never uploaded by the lab.</p>
+            </div>
+            <div class="experiment-safety" aria-label="Experiment safety limits">
+              <strong>Bounded by default</strong>
+              <span>1 active run · max 4 calls · 120 seconds per call · no retries</span>
+            </div>
+          </header>
+
+          <nav class="experiment-tabs" role="tablist" aria-label="Experiment tools">
+            <button type="button" role="tab" class="experiment-tab active" data-experiment="compare" aria-selected="true" aria-controls="experimentPanel">Compare</button>
+            <button type="button" role="tab" class="experiment-tab" data-experiment="inspector" aria-selected="false" aria-controls="experimentPanel" tabindex="-1">Inspector</button>
+            <button type="button" role="tab" class="experiment-tab" data-experiment="cards" aria-selected="false" aria-controls="experimentPanel" tabindex="-1">Agent Cards</button>
+            <button type="button" role="tab" class="experiment-tab" data-experiment="context" aria-selected="false" aria-controls="experimentPanel" tabindex="-1">Context</button>
+            <button type="button" role="tab" class="experiment-tab" data-experiment="capabilities" aria-selected="false" aria-controls="experimentPanel" tabindex="-1">Capabilities</button>
+            <button type="button" role="tab" class="experiment-tab" data-experiment="metrics" aria-selected="false" aria-controls="experimentPanel" tabindex="-1">Metrics</button>
+          </nav>
+
+          <div id="experimentStatus" class="experiment-status" role="status" aria-live="polite">Ready to run a bounded experiment.</div>
+          <div id="experimentPanel" class="experiment-panel" role="tabpanel" tabindex="0"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="answerFormatter.js"></script>
+  <script src="app.js"></script>
+  <script src="experiments.js"></script>
+</body>
+</html>
