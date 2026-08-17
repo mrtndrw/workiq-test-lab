@@ -1311,6 +1311,7 @@ async function mcpRuntimeFacts(req) {
     return {
       toolCount: tools.length,
       toolNames: tools.map((t) => t.name),
+      tools,
       facts: {
         messaging: Boolean(askTool),
         agentDiscovery: names.some((n) => /^list_agents?$/.test(n)),
@@ -1378,10 +1379,15 @@ app.get('/api/lab/capabilities', async (req, res) => {
       // Top-level fields match what the Inspector reads directly (runtime.error).
       ...(mcpRuntime.error
         ? { error: mcpRuntime.error }
-        : { toolCount: mcpRuntime.toolCount, toolNames: mcpRuntime.toolNames }),
+        : { toolCount: mcpRuntime.toolCount, toolNames: mcpRuntime.toolNames, tools: mcpRuntime.tools }),
       mcp: mcpRuntime.error
         ? { available: false, error: mcpRuntime.error }
-        : { available: true, toolCount: mcpRuntime.toolCount, toolNames: mcpRuntime.toolNames },
+        : {
+            available: true,
+            toolCount: mcpRuntime.toolCount,
+            toolNames: mcpRuntime.toolNames,
+            tools: mcpRuntime.tools,
+          },
     },
   });
 });

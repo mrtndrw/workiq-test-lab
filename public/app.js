@@ -26,7 +26,7 @@ let requestAbortReason = null;
 let discoveredAgents = null;
 let agentDiscoveryPromise = null;
 let agentDiscoveryAttempted = false;
-let mcpToolNames = null;
+let mcpTools = null;
 let mcpToolDiscoveryPromise = null;
 let mcpToolDiscoveryError = '';
 let contextPanelCollapsed = false;
@@ -46,7 +46,7 @@ window.workIqLabState = {
       agentConversationIds: { ...agentConversationIds },
       discoveredAgents: (discoveredAgents || []).map((agent) => ({ ...agent })),
       agentDiscoveryAttempted,
-      mcpToolNames: mcpToolNames ? [...mcpToolNames] : null,
+      mcpToolNames: mcpTools ? mcpTools.map((tool) => tool.name) : null,
     };
   },
   discoverAgents(options) {
@@ -87,6 +87,82 @@ function routeUsesMcp() {
   return view === 'agent' ? agentBackends.has('mcp') : mode === 'mcp';
 }
 
+function normalizeMcpTools(tools, toolNames = []) {
+  const source = Array.isArray(tools)
+    ? tools
+    : Array.isArray(toolNames)
+      ? toolNames.map((name) => ({ name }))
+      : [];
+  const unique = new Map();
+  for (const tool of source) {
+    const name = String(tool?.name || '').trim();
+    if (!name || unique.has(name)) continue;
+    unique.set(name, {
+      name,
+      description: typeof tool.description === 'string' ? tool.description.trim() : '',
+      inputSchema:
+        tool.inputSchema && typeof tool.inputSchema === 'object' && !Array.isArray(tool.inputSchema)
+          ? tool.inputSchema
+          : null,
+    });
+  }
+  return [...unique.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function mcpParameterType(schema) {
+  const type = Array.isArray(schema?.type) ? schema.type.join(' | ') : schema?.type;
+  if (type === 'array') {
+    const itemType = Array.isArray(schema?.items?.type)
+      ? schema.items.type.join(' | ')
+      : schema?.items?.type || 'value';
+    return `${itemType}[]`;
+  }
+  if (type) return type;
+  if (schema?.oneOf) return 'one of';
+  if (schema?.anyOf) return 'any of';
+  return 'value';
+}
+
+function mcpToolDetailsHtml(tools) {
+  return `<div class="mcp-tool-details-list">${tools
+    .map((tool) => {
+      const properties = tool.inputSchema?.properties || {};
+      const required = new Set(Array.isArray(tool.inputSchema?.required) ? tool.inputSchema.required : []);
+      const parameters = Object.entries(properties);
+      return `<details class="mcp-tool-details">
+        <summary><strong>${escapeHtml(tool.name)}</strong><span>MCP</span></summary>
+        <div class="mcp-tool-details-body">
+          <p>${escapeHtml(tool.description || 'The live MCP schema does not provide a description for this tool.')}</p>
+          <strong class="mcp-tool-input-title">Inputs</strong>
+          ${
+            parameters.length
+              ? `<div class="mcp-tool-parameters">${parameters
+                  .map(
+                    ([name, schema]) => `<div class="mcp-tool-parameter">
+                      <div><code>${escapeHtml(name)}</code><span>${escapeHtml(mcpParameterType(schema))} · ${
+                        required.has(name) ? 'required' : 'optional'
+                      }</span></div>
+                      ${
+                        typeof schema?.description === 'string' && schema.description.trim()
+                          ? `<p>${escapeHtml(schema.description.trim())}</p>`
+                          : ''
+                      }
+                    </div>`
+                  )
+                  .join('')}</div>`
+              : '<p class="mcp-tool-empty">No input parameters are exposed by the live schema.</p>'
+          }
+        </div>
+      </details>`;
+    })
+    .join('')}</div>`;
+}
+
+window.WorkIqMcpTools = {
+  normalize: normalizeMcpTools,
+  render: mcpToolDetailsHtml,
+};
+
 function renderMcpToolSurface() {
   const card = $('mcpToolSurface');
   const list = $('mcpToolList');
@@ -104,20 +180,15 @@ function renderMcpToolSurface() {
     )}</small></div>`;
     return;
   }
-  if (!mcpToolNames) {
+  if (!mcpTools) {
     count.textContent = 'Loading metadata…';
     list.innerHTML = '<p>Discovering the current MCP tool surface…</p>';
     return;
   }
 
-  count.textContent = `${mcpToolNames.length} tool${mcpToolNames.length === 1 ? '' : 's'}`;
-  list.innerHTML = mcpToolNames.length
-    ? mcpToolNames
-        .map(
-          (name) =>
-            `<div class="log-step"><strong>${escapeHtml(name)}</strong><span>MCP</span></div>`
-        )
-        .join('')
+  count.textContent = `${mcpTools.length} tool${mcpTools.length === 1 ? '' : 's'}`;
+  list.innerHTML = mcpTools.length
+    ? mcpToolDetailsHtml(mcpTools)
     : '<p>The active MCP server exposed no tools.</p>';
 }
 
@@ -126,14 +197,14 @@ async function loadMcpToolSurface({ force = false } = {}) {
     renderMcpToolSurface();
     return;
   }
-  if (mcpToolNames && !force) {
+  if (mcpTools && !force) {
     renderMcpToolSurface();
     return;
   }
   if (mcpToolDiscoveryPromise) return mcpToolDiscoveryPromise;
 
   mcpToolDiscoveryError = '';
-  if (force) mcpToolNames = null;
+  if (force) mcpTools = null;
   renderMcpToolSurface();
   mcpToolDiscoveryPromise = (async () => {
     try {
@@ -141,12 +212,12 @@ async function loadMcpToolSurface({ force = false } = {}) {
       const data = await response.json().catch(() => ({ error: `Request failed (${response.status})` }));
       if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
       if (data.runtime?.error) throw new Error(data.runtime.error);
-      if (!Array.isArray(data.runtime?.toolNames)) {
+      if (!Array.isArray(data.runtime?.tools) && !Array.isArray(data.runtime?.toolNames)) {
         throw new Error('The capability response did not include MCP tool metadata.');
       }
-      mcpToolNames = [...new Set(data.runtime.toolNames.map((name) => String(name)))].sort();
+      mcpTools = normalizeMcpTools(data.runtime.tools, data.runtime.toolNames);
     } catch (error) {
-      mcpToolNames = null;
+      mcpTools = null;
       mcpToolDiscoveryError = error.message;
     } finally {
       mcpToolDiscoveryPromise = null;
@@ -1995,7 +2066,7 @@ $('signout').addEventListener('click', async () => {
   await fetch('/api/signout', { method: 'POST' });
   discoveredAgents = null;
   agentDiscoveryAttempted = false;
-  mcpToolNames = null;
+  mcpTools = null;
   mcpToolDiscoveryError = 'Sign in to discover the current MCP tool surface.';
   renderMcpToolSurface();
   window.dispatchEvent(new CustomEvent('workiq:agents', { detail: { agents: [] } }));

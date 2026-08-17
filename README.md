@@ -135,6 +135,23 @@ cannot stream the terminal MCP answer, expose hidden Work IQ reasoning or
 internal tool calls, apply the REST-only web-grounding toggle, or combine
 multiple protocols without switching to Azure OpenAI orchestration.
 
+### How Agent orchestration uses Work Context
+
+When OneDrive or SharePoint URLs are attached in Agent mode, the app tells the
+orchestrator how many files are attached but withholds the URL values from Azure
+OpenAI. The system prompt requires the orchestrator to choose REST ask or MCP
+ask with `fileUrls` support and explicitly ask Work IQ to inspect the attached
+files when that context is relevant to the request. The attachment does not
+force a tool call for an unrelated request. When the orchestrator selects a
+compatible tool, the server replaces any model-generated file argument with the
+validated URLs and injects them into the Work IQ call as REST
+`contextualResources` or MCP `fileUrls`.
+
+A2A and raw MCP entity tools do not receive attached URLs in this app. If no
+compatible REST or MCP ask tool is available, the request fails explicitly
+instead of answering without the selected files. Retrieved file content is
+treated as untrusted evidence, never as instructions for the orchestrator.
+
 The comparison tool in 'experiments' prepares REST conversations and MCP clients before releasing
 one shared prompt-dispatch barrier. It reports setup, barrier wait, first
 response, delivery, prompt-to-complete, and end-to-end timing separately.

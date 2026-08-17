@@ -1192,9 +1192,10 @@
   function renderCapabilities() {
     const data = state.capabilities;
     const protocols = data?.protocols || {};
-    const mcpToolNames = Array.isArray(data?.runtime?.toolNames)
-      ? [...new Set(data.runtime.toolNames.map((name) => String(name)))].sort()
-      : [];
+    const mcpTools = window.WorkIqMcpTools.normalize(
+      data?.runtime?.tools,
+      data?.runtime?.toolNames
+    );
     panel.innerHTML = `<section class="exp-section">
       <div class="exp-section-head">
         <div><h3>Runtime capabilities and MCP tools</h3><p>Inspect documented service behavior, runtime metadata, the current MCP tool surface, and what this lab implements. Refreshing metadata does not invoke a billable Work IQ tool.</p></div>
@@ -1207,13 +1208,13 @@
         data
           ? `<article class="exp-card">
               <span class="eyebrow">Available MCP tools</span>
-              <h4>${escapeHtml(`${mcpToolNames.length} tool${mcpToolNames.length === 1 ? '' : 's'} discovered`)}</h4>
-              <p>This is the current schema-only <code>tools/list</code> surface. Loading it does not call any tool or send a Work IQ ask.</p>
+              <h4>${escapeHtml(`${mcpTools.length} tool${mcpTools.length === 1 ? '' : 's'} discovered`)}</h4>
+              <p>Select a tool to inspect its live description and input parameters. Loading this schema-only <code>tools/list</code> surface does not call any tool or send a Work IQ ask.</p>
               ${
                 data.runtime?.error
                   ? `<div class="exp-callout bad">${escapeHtml(data.runtime.error)}</div>`
-                  : mcpToolNames.length
-                    ? `<pre class="exp-json">${escapeHtml(mcpToolNames.join('\n'))}</pre>`
+                  : mcpTools.length
+                    ? window.WorkIqMcpTools.render(mcpTools)
                     : '<div class="exp-empty">The active MCP server exposed no tools.</div>'
               }
             </article>
