@@ -6,6 +6,10 @@ delegated Microsoft Entra sign-in, and optional Azure OpenAI orchestration (to s
 Two stories use direct Work IQ protocols and work without Azure OpenAI; the two
 agent-orchestrated stories require it.
 
+Watch this video for an overview of the application: https://youtu.be/t2Ta3PYOviM.
+[![Thumbnail of Youtube video demonstrating the Work IQ Test Lab](https://img.youtube.com/vi/t2Ta3PYOviM/maxresdefault.jpg)](https://youtu.be/t2Ta3PYOviM)
+
+
 ## Disclaimer
 
 This is an independent, community-provided sample project. It is not an official
