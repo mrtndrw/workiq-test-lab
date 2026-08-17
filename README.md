@@ -29,6 +29,13 @@ is provided.
 Microsoft, Microsoft 365, Azure, Work IQ, and related names may be trademarks of
 Microsoft Corporation. Their use does not imply affiliation or endorsement.
 
+## License
+
+This project is licensed under the [MIT License](LICENSE). The MIT License
+includes an "as is" warranty disclaimer and limitation of liability. The
+additional disclaimer above clarifies the project's unofficial status,
+operational responsibilities, support expectations, and trademark use.
+
 ## See it in action
 
 ### Live lab and guided stories

@@ -2,6 +2,7 @@
   "name": "workiq-test-lab",
   "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Live lab and guided use cases for Microsoft Work IQ",
   "type": "module",
   "main": "src/server.js",
